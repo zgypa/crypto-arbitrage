@@ -1,1 +1,4 @@
 keys/*.key
+env
+**.pyc
+
