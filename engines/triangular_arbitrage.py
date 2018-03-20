@@ -53,7 +53,6 @@ class CryptoEngineTriArbitrage(object):
             else:
                 self.hasOpenOrder = False
                 print 'no open orders'
-                print 'starting to check order book...'
     
     def cancel_allOrders(self):
         print 'cancelling all open orders...'
@@ -91,12 +90,16 @@ class CryptoEngineTriArbitrage(object):
         return True
     
     def check_orderBook(self):
+        print 'starting to check order book...'
+
         rs = [self.engine.get_ticker_lastPrice(self.exchange['tickerA']),
             self.engine.get_ticker_lastPrice(self.exchange['tickerB']),
             self.engine.get_ticker_lastPrice(self.exchange['tickerC']),
         ]
         lastPrices = []
-        for res in self.send_request(rs):
+        rs_values = self.send_request(rs)
+        print("Found {} results".format(len(rs_values)))
+        for res in rs_values:
             lastPrices.append(next(res.parsed.itervalues()))
 
         rs = [self.engine.get_ticker_orderBook_innermost(self.exchange['tickerPairA']),
