@@ -86,7 +86,8 @@ class ExchangeEngine(ExchangeEngineBase):
         }
     '''       
     def get_ticker_lastPrice(self, ticker):
-         return self._send_request('ticker/{0}/'.format(ticker), 'GET', {}, [self.hook_lastPrice(ticker=ticker)])
+        print("Bitstamp: Looking for last price of {}".format(ticker))
+        return self._send_request('ticker/{0}/'.format(ticker), 'GET', {}, [self.hook_lastPrice(ticker=ticker)])
 
     def hook_lastPrice(self, *factory_args, **factory_kwargs):
         def res_hook(r, *r_args, **r_kwargs):

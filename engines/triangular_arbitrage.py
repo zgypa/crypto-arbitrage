@@ -21,18 +21,18 @@ class CryptoEngineTriArbitrage(object):
             print '---------------------------- MOCK MODE ----------------------------'
         #Send the request asynchronously
         while True:
-            try:
+#             try:
                 if not self.mock and self.hasOpenOrder:
                     self.check_openOrder()
                 elif self.check_balance():           
                     bookStatus = self.check_orderBook()
                     if bookStatus['status']:
                         self.place_order(bookStatus['orderInfo'])
-            except Exception, e:
-               # raise
-               print e
+#             except Exception, e:
+#                 # raise
+#                 print e
             
-            time.sleep(self.engine.sleepTime)
+                time.sleep(self.engine.sleepTime)
     
     def check_openOrder(self):
         if self.openOrderCheckCount >= 5:
@@ -100,6 +100,8 @@ class CryptoEngineTriArbitrage(object):
         rs_values = self.send_request(rs)
         print("Found {} results".format(len(rs_values)))
         for res in rs_values:
+            for key in res.parsed:
+                print('{} = {}USD'.format(key, res.parsed[key]))
             lastPrices.append(next(res.parsed.itervalues()))
 
         rs = [self.engine.get_ticker_orderBook_innermost(self.exchange['tickerPairA']),
@@ -109,15 +111,15 @@ class CryptoEngineTriArbitrage(object):
 
         responses = self.send_request(rs)
         
-        if self.mock:
-            print '{0} - {1}; {2} - {3}; {4} - {5}'.format(
-                self.exchange['tickerPairA'],
-                responses[0].parsed,
-                self.exchange['tickerPairB'],
-                responses[1].parsed,
-                self.exchange['tickerPairC'],
-                responses[2].parsed
-                )
+#         if self.mock:
+        print '{0} - {1}; {2} - {3}; {4} - {5}'.format(
+            self.exchange['tickerPairA'],
+            responses[0].parsed,
+            self.exchange['tickerPairB'],
+            responses[1].parsed,
+            self.exchange['tickerPairC'],
+            responses[2].parsed
+            )
         
         # bid route BTC->ETH->LTC->BTC
         bidRoute_result = (1 / responses[0].parsed['ask']['price']) \
@@ -127,7 +129,9 @@ class CryptoEngineTriArbitrage(object):
         askRoute_result = (1 * responses[0].parsed['bid']['price']) \
                             / responses[2].parsed['ask']['price']   \
                             * responses[1].parsed['bid']['price']
-        
+
+        print('Bid Route: {} Ask Route: {}'.format(bidRoute_result, askRoute_result))
+
         # Max amount for bid route & ask routes can be different and so less profit
         if bidRoute_result > 1 or \
         (bidRoute_result > 1 and askRoute_result > 1 and (bidRoute_result - 1) * lastPrices[0] > (askRoute_result - 1) * lastPrices[1]):
@@ -136,13 +140,16 @@ class CryptoEngineTriArbitrage(object):
             status = 2 # ask route
         else:
             status = 0 # do nothing
-        
+
         if status > 0:
             maxAmounts = self.getMaxAmount(lastPrices, responses, status)
+            print('Max Amounts: {}'.format(maxAmounts))
             fee = 0
             for index, amount in enumerate(maxAmounts):
                 fee += amount * lastPrices[index]
             fee *= self.engine.feeRatio
+
+            print('Max Amounts: {}\nFee: {}'.format(maxAmounts, fee))
             
             bidRoute_profit = (bidRoute_result - 1) * lastPrices[0] * maxAmounts[0]
             askRoute_profit = (askRoute_result - 1) * lastPrices[1] * maxAmounts[1]
@@ -195,6 +202,9 @@ class CryptoEngineTriArbitrage(object):
                     }                                        
                 ]               
                 return {'status': 2, 'orderInfo': orderInfo}
+        else:
+            print("No interesting route found. Doing nothing.")
+    
         return {'status': 0}
 
     # Using USDT may not be accurate

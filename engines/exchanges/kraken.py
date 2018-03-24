@@ -132,7 +132,8 @@ class ExchangeEngine(ExchangeEngineBase):
         }
     '''       
     def get_ticker_lastPrice(self, ticker):
-         return self._send_request('public/Ticker?pair={0}ZUSD'.format(ticker), 'GET', {}, [self.hook_lastPrice(ticker=ticker)])
+        print("Kraken: Looking for last price of {}".format(ticker))
+        return self._send_request('public/Ticker?pair={0}ZUSD'.format(ticker), 'GET', {}, [self.hook_lastPrice(ticker=ticker)])
 
     def hook_lastPrice(self, *factory_args, **factory_kwargs):
         def res_hook(r, *r_args, **r_kwargs):
