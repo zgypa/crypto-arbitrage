@@ -2,7 +2,7 @@
     All trades have a 0.25% commission. -> real case it is 0.250626606% so use 0.26% for calculation instead
 
 '''
-
+import logging
 from mod_imports import *
 
 class ExchangeEngine(ExchangeEngineBase):
@@ -50,7 +50,7 @@ class ExchangeEngine(ExchangeEngineBase):
             response = grequests.map([req])[0].json()
             
             if 'error' in response:
-                print response
+                logging.info(response)
             return response
     '''
         return in r.parsed, showing all and required tickers
@@ -83,7 +83,7 @@ class ExchangeEngine(ExchangeEngineBase):
         }
     '''       
     def get_ticker_lastPrice(self, ticker):
-        print("Bittrex: Looking for last price of {}".format(ticker))
+        logging.info("Looking for last price of {}".format(ticker))
         return self._send_request('public/getticker?market=USDT-{0}'.format(ticker), 'GET', {}, [self.hook_lastPrice(ticker=ticker)])
 
     def hook_lastPrice(self, *factory_args, **factory_kwargs):
@@ -170,7 +170,7 @@ if __name__ == "__main__":
     #     print res.parsed
     #     pass
     for res in grequests.map([engine.get_ticker_lastPrice('LTC')]):
-        print res.parsed
+        logging.info(res.parsed)
         pass    
     #print engine.get_ticker_orderBook('ETH-OMG')
     #print engine.parseTickerData(engine.get_ticker_history('XRPUSD'))

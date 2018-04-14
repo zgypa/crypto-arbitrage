@@ -1,5 +1,6 @@
 import argparse
 import json
+import logging
 
 configFile = 'arbitrage_config.json'
 
@@ -13,16 +14,21 @@ pretty_config_arbitrage =  ''
 parser = argparse.ArgumentParser(description='Crypto Arbitrage')
 parser.add_argument('-m', '--mode', help='Arbitrage mode: triangular or exchange', required=True)
 parser.add_argument('-p', '--production', help='Production mode', action='store_true')
+parser.add_argument('-l', '--loglevel', help='Allowed log levels: CRITICAL, ERROR, WARNING, INFO, DEBUG', default=logging.INFO)
 args = parser.parse_args()
+
+logging.basicConfig(format='%(asctime)s - %(levelname)s - %(funcName)s: %(message)s',
+                    level=args.loglevel)
 
 engine = None
 isMockMode = True if not args.production else False
 
 if args.mode == 'triangular':
-    print(pretty_config_triangular)
+    logging.info(pretty_config_triangular)
     from engines.triangular_arbitrage import CryptoEngineTriArbitrage
     engine = CryptoEngineTriArbitrage(config['triangular'], isMockMode)
 elif args.mode == 'exchange':
+    logging.info(pretty_config_arbitrage)
     from engines.exchange_arbitrage import CryptoEngineExArbitrage
     engine = CryptoEngineExArbitrage(config['exchange'], isMockMode)
 else:
