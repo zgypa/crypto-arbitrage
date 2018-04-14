@@ -94,13 +94,16 @@ class CryptoEngineTriArbitrage(object):
     def check_orderBook(self):
         logging.info('starting to check order book...')
 
+        # Create AsyncRequest to then feed into send_request
         rs = [self.engine.get_ticker_lastPrice(self.exchange['tickerA']),
             self.engine.get_ticker_lastPrice(self.exchange['tickerB']),
             self.engine.get_ticker_lastPrice(self.exchange['tickerC']),
         ]
         lastPrices = []
+        
+        # Get last price of each ticker
         rs_values = self.send_request(rs)
-        logging.debug("Found {} results".format(len(rs_values)))
+#         logging.debug("Found {} results".format(len(rs_values)))
         for res in rs_values:
             for key in res.parsed:
                 logging.info('{} = {}USD'.format(key, res.parsed[key]))
