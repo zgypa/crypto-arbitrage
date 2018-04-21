@@ -72,24 +72,50 @@ class CryptoEngineTriArbitrage(object):
 
     #Check and set current balance
     def check_balance(self):
+        
+        not_enough = False
+        
         rs = [self.engine.get_balance([
             self.exchange['tickerA'],
             self.exchange['tickerB'],
             self.exchange['tickerC']
             ])]
 
+        logging.info("Fetching balances for all non-zero wallets.")
         responses = self.send_request(rs)
 
-        self.engine.balance = responses[0].parsed
+        import json
+        rc = json.loads(responses[0]._content)
+        for result in rc['result']:
+            logging.debug("Found Wallet with {} {}".format(result['Currency'], result['Balance']))
 
+        self.engine.balance = responses[0].parsed
+        logging.debug(self.engine.balance)
+        
+        if (self.exchange['tickerA'] not in self.engine.balance):
+            logging.warn("{} wallet with zero balance. Can't continue.".format(self.exchange['tickerA']))
+            not_enough = True
+        if (self.exchange['tickerB'] not in self.engine.balance):
+            logging.warn("{} wallet with zero balance. Can't continue.".format(self.exchange['tickerB']))
+            not_enough = True
+        if (self.exchange['tickerC'] not in self.engine.balance):
+            logging.warn("{} wallet with zero balance. Can't continue.".format(self.exchange['tickerC']))
+            not_enough = True
+
+        
         ''' Not needed? '''
-        # if not self.mock:
-        #     for res in responses:
-        #         for ticker in res.parsed:
-        #             if res.parsed[ticker] < 0.05:
-        #                 print ticker, res.parsed[ticker], '- Not Enough'
-        #                 return False
-        return True
+        for res in responses:
+            for ticker in res.parsed:
+                at_least = 0.0
+                if res.parsed[ticker] < at_least:
+                    logging.warning("{0} {1} - Not Enough. At least {2} {0} is required.".format(ticker, res.parsed[ticker], at_least))
+                    not_enough = True
+                    
+        if not_enough == True: 
+            return False
+        else:
+            logging.info("Found enough currency in all wallets. Proceeding.")
+            return True
     
     def check_orderBook(self):
         logging.info('starting to check order book...')
@@ -227,7 +253,7 @@ class CryptoEngineTriArbitrage(object):
             if status == 2: bid_ask *= -1
             bid_ask = 'bid' if bid_ask == 1 else 'ask'
             
-            
+            logging.debug(self.engine.balance[self.exchange[tickerIndex]])
             
             maxBalance = min(orderBookRes[index].parsed[bid_ask]['amount'], 
                              self.engine.balance[self.exchange[tickerIndex]])
@@ -285,7 +311,7 @@ if __name__ == '__main__':
         'tickerPairC': 'BTC-LTC',
         'tickerA': 'BTC',
         'tickerB': 'ETH',
-        'tickerC': 'LTC'
+        'tickerC': 'PTOY'
     }    
     engine = CryptoEngineTriArbitrage(exchange, True)
     #engine = CryptoEngineTriArbitrage(exchange)
