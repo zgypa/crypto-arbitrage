@@ -60,7 +60,9 @@ class ExchangeEngine(ExchangeEngineBase):
         }
     '''    
     def get_balance(self, tickers=[]):
-        return self._send_request('account/getbalances', 'GET', {}, [self.hook_getBalance(tickers=tickers)])
+        balance=self._send_request('account/getbalances', 'GET', {}, [self.hook_getBalance(tickers=tickers)])
+        logging.debug(balance)
+        return balance
     
     def hook_getBalance(self, *factory_args, **factory_kwargs):
         def res_hook(r, *r_args, **r_kwargs):

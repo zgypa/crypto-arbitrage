@@ -146,6 +146,8 @@ class CryptoEngineTriArbitrage(object):
         else:
             status = 0 # do nothing
 
+#         status =1
+
         if status > 0:
             maxAmounts = self.getMaxAmount(lastPrices, responses, status)
             logging.info('Max Amounts: {}'.format(maxAmounts))
@@ -225,12 +227,16 @@ class CryptoEngineTriArbitrage(object):
             if status == 2: bid_ask *= -1
             bid_ask = 'bid' if bid_ask == 1 else 'ask'
             
-            maxBalance = min(orderBookRes[index].parsed[bid_ask]['amount'], self.engine.balance[self.exchange[tickerIndex]])
-            # print '{0} orderBookAmount - {1} ownAmount - {2}'.format(
-            #     self.exchange[tickerIndex], 
-            #     orderBookRes[index].parsed[bid_ask]['amount'], 
-            #     self.engine.balance[self.exchange[tickerIndex]]
-            # )
+            
+            
+            maxBalance = min(orderBookRes[index].parsed[bid_ask]['amount'], 
+                             self.engine.balance[self.exchange[tickerIndex]])
+            
+            logging.debug('{0} - orderBookAmount: {1}; ownAmount: {2}'.format(
+                self.exchange[tickerIndex], 
+                orderBookRes[index].parsed[bid_ask]['amount'], 
+                self.engine.balance[self.exchange[tickerIndex]]
+            ))
             USDT = maxBalance * lastPrices[index] * (1 - self.engine.feeRatio)
             if not maxUSDT or USDT < maxUSDT: 
                 maxUSDT = USDT       
