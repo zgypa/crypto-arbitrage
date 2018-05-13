@@ -1,3 +1,16 @@
+'''
+* The code tries two ways of making a profit via arbitrage. It doesn't just 
+    check if A > B > C > A makes a profit, but also tries B > A > C > B, and 
+    compares the two routes, to see which one is more profitable. 
+* One route is called "Bid" route, because from the initial currency A, it 
+    places a bid to purchase B. Start by selling A.
+* The other route is called "ask", because it asks to buy more currency A to 
+    start with. Start by buying A.
+* The gain is then calculated for each route: if it's > 1, there is a gain, if 
+    it's < 1, there is a loss.
+* The gains of both routes are compared: the largest positive gain is chosen.
+'''
+
 import time
 from time import strftime
 import grequests
@@ -175,6 +188,9 @@ class CryptoEngineTriArbitrage(object):
         tickerPairC_ask_price = responses[2].parsed['ask']['price']
         tickerPairC_bid_price = responses[2].parsed['bid']['price']
         
+        
+        # Calculate the gain factor for each route
+        
         # bid route tickerA->tickerB->tickerC->tickerA
         bidRoute_result = (1 / tickerPairA_ask_price) / tickerPairB_ask_price * tickerPairC_bid_price
         # ask route tickerB->tickerA->tickerC->tickerB
@@ -193,9 +209,12 @@ class CryptoEngineTriArbitrage(object):
 
         logging.info('Bid Route: {} Ask Route: {}'.format(bidRoute_result, askRoute_result))
 
+        # Calculate the actual real monetary gain in USD for each route
         ricavo_potenziale_bid_tickerA = (bidRoute_result - 1) * lastPrices[0] # units in USDT
         ricavo_potenziale_ask_tickerB = (askRoute_result - 1) * lastPrices[1] # units in USDT
         
+        # Compare the real monetary gains for each route with each other,
+        # and select route with highest gain. 
         if (ricavo_potenziale_bid_tickerA > ricavo_potenziale_ask_tickerB) and \
             ricavo_potenziale_bid_tickerA > 0:
             # If we can make more money going for the bid route, let's do it.
