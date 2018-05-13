@@ -6,6 +6,10 @@ import logging
 
 LOG_LEVEL=logging.DEBUG
 
+STATUS_DO_NOTHING = 0
+STATUS_BID_ROUTE = 1
+STATUS_ASK_ROUTE = 2
+
 class CryptoEngineTriArbitrage(object):
     
     def __init__(self, exchange, mock=False):
@@ -132,7 +136,7 @@ class CryptoEngineTriArbitrage(object):
 #         logging.debug("Found {} results".format(len(rs_values)))
         for res in rs_values:
             for key in res.parsed:
-                logging.info('{} = {}USD'.format(key, res.parsed[key]))
+                logging.info('lastPrices: {} = {}USD'.format(key, res.parsed[key]))
             lastPrices.append(next(res.parsed.itervalues()))
 
         rs = [self.engine.get_ticker_orderBook_innermost(self.exchange['tickerPairA']),
@@ -152,31 +156,74 @@ class CryptoEngineTriArbitrage(object):
             responses[2].parsed
             ))
         
-        # bid route BTC->ETH->LTC->BTC
-        bidRoute_result = (1 / responses[0].parsed['ask']['price']) \
-                            / responses[1].parsed['ask']['price']   \
-                            * responses[2].parsed['bid']['price']  
-        # ask route ETH->BTC->LTC->ETH
-        askRoute_result = (1 * responses[0].parsed['bid']['price']) \
-                            / responses[2].parsed['ask']['price']   \
-                            * responses[1].parsed['bid']['price']
+        '''
+        tickerPairA = tickerA-tickerB (units in tickerA)
+        tickerPairB = tickerB-tickerC (units in tickerB)
+        tickerPairC = tickerA-tickerC (units in tickerA)
+        
+        bidRoute_result and askRoute_result are 1.0 in a perfect, ideal, 
+            efficient market.
+            
+        bidRoute_result and askRoute_result > 1.0 means inefficencies in market
+            which can be exploited to make a profit.
+                    
+        '''
+        tickerPairA_ask_price = responses[0].parsed['ask']['price']
+        tickerPairA_bid_price = responses[0].parsed['bid']['price']
+        tickerPairB_ask_price = responses[1].parsed['ask']['price']
+        tickerPairB_bid_price = responses[1].parsed['bid']['price']
+        tickerPairC_ask_price = responses[2].parsed['ask']['price']
+        tickerPairC_bid_price = responses[2].parsed['bid']['price']
+        
+        # bid route tickerA->tickerB->tickerC->tickerA
+        bidRoute_result = (1 / tickerPairA_ask_price) / tickerPairB_ask_price * tickerPairC_bid_price
+        # ask route tickerB->tickerA->tickerC->tickerB
+        askRoute_result = tickerPairA_bid_price / tickerPairC_ask_price * tickerPairB_bid_price
+
+
+                            
+#         # bid route tickerA->tickerB->tickerC->tickerA
+#         bidRoute_result = (1 / responses[0].parsed['ask']['price']) \
+#                             / responses[1].parsed['ask']['price']   \
+#                             * responses[2].parsed['bid']['price']  
+#         # ask route tickerB->tickerA->tickerC->tickerB
+#         askRoute_result = (1 * responses[0].parsed['bid']['price']) \
+#                             / responses[2].parsed['ask']['price']   \
+#                             * responses[1].parsed['bid']['price']
 
         logging.info('Bid Route: {} Ask Route: {}'.format(bidRoute_result, askRoute_result))
 
-        # Max amount for bid route & ask routes can be different and so less profit
-        if bidRoute_result > 1 or \
-        (bidRoute_result > 1 and askRoute_result > 1 and (bidRoute_result - 1) * lastPrices[0] > (askRoute_result - 1) * lastPrices[1]):
-            status = 1 # bid route
-        elif askRoute_result > 1:
-            status = 2 # ask route
+        ricavo_potenziale_bid_tickerA = (bidRoute_result - 1) * lastPrices[0] # units in USDT
+        ricavo_potenziale_ask_tickerB = (askRoute_result - 1) * lastPrices[1] # units in USDT
+        
+        if (ricavo_potenziale_bid_tickerA > ricavo_potenziale_ask_tickerB) and \
+            ricavo_potenziale_bid_tickerA > 0:
+            # If we can make more money going for the bid route, let's do it.
+            status = STATUS_BID_ROUTE
+        elif (ricavo_potenziale_ask_tickerB > ricavo_potenziale_bid_tickerA) and \
+            ricavo_potenziale_ask_tickerB > 0:
+            # If we can make more money going for the ask route, let's do it.
+            status = STATUS_ASK_ROUTE
         else:
-            status = 0 # do nothing
+            # If we would loose money, don't do it (two of spades).
+            status = STATUS_DO_NOTHING
+        
+        # Max amount for bid route & ask routes can be different and so less profit
+#         if bidRoute_result > 1 or \
+#             (askRoute_result > 1 and 
+#              ricavo_potenziale_bid_tickerA > ricavo_potenziale_ask_tickerB) :
+#         #(bidRoute_result > 1 and askRoute_result > 1 and (bidRoute_result - 1) * lastPrices[0] > (askRoute_result - 1) * lastPrices[1]):
+#             status = STATUS_BID_ROUTE
+#         elif askRoute_result > 1:
+#             status = STATUS_ASK_ROUTE
+#         else:
+#             status = STATUS_DO_NOTHING
 
-#         status =1
+#         status = STATUS_BID_ROUTE
 
-        if status > 0:
+        if status > STATUS_DO_NOTHING:
+            logging.info('Found possible possibility to make some gains. Status = {}'.format(status))
             maxAmounts = self.getMaxAmount(lastPrices, responses, status)
-            logging.info('Max Amounts: {}'.format(maxAmounts))
             fee = 0
             for index, amount in enumerate(maxAmounts):
                 fee += amount * lastPrices[index]
@@ -189,7 +236,7 @@ class CryptoEngineTriArbitrage(object):
             # print 'bidRoute_profit - {0} askRoute_profit - {1} fee - {2}'.format(
             #     bidRoute_profit, askRoute_profit, fee
             # )
-            if status == 1 and bidRoute_profit - fee > self.minProfitUSDT:
+            if status == STATUS_BID_ROUTE and bidRoute_profit - fee > self.minProfitUSDT:
                 logging.info(' Bid Route: Result - {0} Profit - {1} Fee - {2}'.format(bidRoute_result, bidRoute_profit, fee))
                 orderInfo = [
                     {
@@ -211,8 +258,8 @@ class CryptoEngineTriArbitrage(object):
                         "amount": maxAmounts[2]
                     }                                        
                 ]
-                return {'status': 1, "orderInfo": orderInfo}
-            elif status == 2 and askRoute_profit - fee > self.minProfitUSDT:
+                return {'status': STATUS_BID_ROUTE, "orderInfo": orderInfo}
+            elif status == STATUS_ASK_ROUTE and askRoute_profit - fee > self.minProfitUSDT:
                 logging.info(' Ask Route: Result - {0} Profit - {1} Fee - {2}'.format(askRoute_result, askRoute_profit, fee))
                 orderInfo = [
                     {
@@ -236,22 +283,39 @@ class CryptoEngineTriArbitrage(object):
                 ]               
                 return {'status': 2, 'orderInfo': orderInfo}
         else:
-            logging.info("No interesting route found. Doing nothing.")
+            logging.info("No interesting route found. Two of Spades.")
     
         logging.debug("check order book end")
         return {'status': 0}
 
+    '''
+    orderBookRes: Responses from HTTP queries to order book. It's a list, on 
+                  item per ticker. We need it here only to get the 
+                  parsed[ask|bid][amount] value for each currency. 
+                  
+    status:       Indicates 
+    '''
     # Using USDT may not be accurate
     def getMaxAmount(self, lastPrices, orderBookRes, status):
         maxUSDT = []
+        BID = 1
+        ASK = -1
         for index, tickerIndex in enumerate(['tickerA', 'tickerB', 'tickerC']):
             # 1: 'bid', -1: 'ask'
-            if index == 0: bid_ask = -1
-            elif index == 1: bid_ask = -1
-            else: bid_ask = 1
+            if tickerIndex == 'tickerA': bid_ask = ASK
+            elif tickerIndex == 'tickerB': bid_ask = ASK
+            else: bid_ask = BID
+
+#             if index == 0: bid_ask = -1
+#             elif index == 1: bid_ask = -1
+#             else: bid_ask = 1
+
             # switch for ask route
-            if status == 2: bid_ask *= -1
+            if status == STATUS_ASK_ROUTE: bid_ask *= -1
+
             bid_ask = 'bid' if bid_ask == 1 else 'ask'
+            
+            logging.debug('Ticker: {} Route decided: {}'.format(tickerIndex, bid_ask))
             
             logging.debug(self.engine.balance[self.exchange[tickerIndex]])
             
