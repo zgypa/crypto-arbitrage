@@ -23,12 +23,14 @@ STATUS_DO_NOTHING = 0
 STATUS_BID_ROUTE = 1
 STATUS_ASK_ROUTE = 2
 
+
+
 class CryptoEngineTriArbitrage(object):
     
-    def __init__(self, exchange, mock=False):
-        self.exchange = exchange
-        self.mock = mock
-        self.minProfitUSDT = 0.3
+    def __init__(self, config):
+        self.exchange = config['triangular']
+        self.mock = config['isMockMode'] 
+        self.minProfitUSDT = float(self.exchange['minProfitUSDT'])
         self.hasOpenOrder = True # always assume there are open orders first
         self.openOrderCheckCount = 0
       
