@@ -1,1 +1,5 @@
-python ./main.py --loglevel DEBUG --production -m triangular
+
+source $HOME/env/bin/activate
+cd crypto-arbitrage
+python ./main.py --loglevel ALERT --production -m triangular --logdata $HOME/public_html/ca_logdata.csv 
+deactivate
