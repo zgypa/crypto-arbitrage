@@ -4,10 +4,10 @@ import grequests
 from exchanges.loader import EngineLoader
 
 class CryptoEngineExArbitrage(object):
-    def __init__(self, exParams, mock=False):
-        self.exParams = exParams
-        self.mock = mock
-        self.minProfit = 0.00005 # This may not be accurate as coins have different value        
+    def __init__(self, config, mock=False):
+        self.exParams = config['exchange']
+        self.mock = self.exParams['isMockMode']
+        self.minProfit = self.exParams['isMockMode']['minProfit'] # This may not be accurate as coins have different value        
         self.hasOpenOrder = True # always assume there are open orders first
         self.openOrderCheckCount = 0
 

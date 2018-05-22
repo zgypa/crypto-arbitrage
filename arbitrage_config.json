@@ -11,6 +11,8 @@
         "minProfitUSDT" : "0.3"
     },
     "exchange": {
+        "minProfit": "0.00005",
+        
         "exchangeA": {
             "exchange": "bittrex",
             "keyFile": "keys/bittrex.key",
@@ -22,8 +24,8 @@
             "exchange": "bitstamp",
             "keyFile": "keys/bitstamp.key",
             "tickerPair": "ethbtc",
-            "tickerA": "btc",
-            "tickerB": "eth"         
+            "tickerA": "BTC",
+            "tickerB": "ETH"         
         }
     }
 }
