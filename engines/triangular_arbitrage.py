@@ -11,8 +11,8 @@
 * The gains of both routes are compared: the largest positive gain is chosen.
 '''
 
+import csv, datetime
 import time
-from time import strftime
 import grequests
 from exchanges.loader import EngineLoader
 import logging
@@ -23,17 +23,28 @@ STATUS_DO_NOTHING = 0
 STATUS_BID_ROUTE = 1
 STATUS_ASK_ROUTE = 2
 
+tickerA = ""
+tickerB = ""
+tickerC = ""
 
 
 class CryptoEngineTriArbitrage(object):
-    
+
     def __init__(self, config):
         self.exchange = config['triangular']
-        self.mock = config['isMockMode'] 
+        self.mock    = config['isMockMode'] 
+        self.logdata = config['logdata']
         self.minProfitUSDT = float(self.exchange['minProfitUSDT'])
         self.hasOpenOrder = True # always assume there are open orders first
         self.openOrderCheckCount = 0
-      
+        
+        self.logdataline = []
+
+        global tickerA, tickerB, tickerC
+        tickerA = self.exchange['tickerA']
+        tickerB = self.exchange['tickerB']
+        tickerC = self.exchange['tickerC']
+        
         self.engine = EngineLoader.getEngine(self.exchange['exchange'], self.exchange['keyFile'])
 
     def start_engine(self):
@@ -43,17 +54,25 @@ class CryptoEngineTriArbitrage(object):
         #Send the request asynchronously
         while True:
 #             try:
-                if not self.mock and self.hasOpenOrder:
-                    self.check_openOrder()
-                elif self.check_balance():           
-                    bookStatus = self.check_orderBook()
-                    if bookStatus['status']:
-                        self.place_order(bookStatus['orderInfo'])
+            self.logdataline = []
+            self.logdataline.append(datetime.datetime.utcnow())
+
+            if not self.mock and self.hasOpenOrder:
+                self.check_openOrder()
+            elif self.check_balance():           
+                bookStatus = self.check_orderBook()
+                if bookStatus['status']:
+                    self.place_order(bookStatus['orderInfo'])
+            if self.logdata is not None:
+                with open(self.logdata,'a') as logdatafile:
+                    w = csv.writer(logdatafile, quotechar='"', quoting=csv.QUOTE_ALL) 
+                    w.writerow(self.logdataline)
+                    
 #             except Exception, e:
 #                 # raise
 #                 print e
             
-                time.sleep(self.engine.sleepTime)
+                time.sleep(self.engine.sleepTime + 10)
     
     def check_openOrder(self):
         if self.openOrderCheckCount >= 5:
@@ -94,11 +113,7 @@ class CryptoEngineTriArbitrage(object):
         
         not_enough = False
         
-        rs = [self.engine.get_balance([
-            self.exchange['tickerA'],
-            self.exchange['tickerB'],
-            self.exchange['tickerC']
-            ])]
+        rs = [self.engine.get_balance([tickerA,tickerB,tickerC])] 
 
         logging.info("Fetching balances for all non-zero wallets.")
         responses = self.send_request(rs)
@@ -111,14 +126,14 @@ class CryptoEngineTriArbitrage(object):
         self.engine.balance = responses[0].parsed
         logging.debug(self.engine.balance)
         
-        if (self.exchange['tickerA'] not in self.engine.balance):
-            logging.warn("{} wallet with zero balance. Can't continue.".format(self.exchange['tickerA']))
+        if (tickerA not in self.engine.balance):
+            logging.warn("{} wallet with zero balance. Can't continue.".format(tickerA))
             not_enough = True
-        if (self.exchange['tickerB'] not in self.engine.balance):
-            logging.warn("{} wallet with zero balance. Can't continue.".format(self.exchange['tickerB']))
+        if (tickerB not in self.engine.balance):
+            logging.warn("{} wallet with zero balance. Can't continue.".format(tickerB))
             not_enough = True
-        if (self.exchange['tickerC'] not in self.engine.balance):
-            logging.warn("{} wallet with zero balance. Can't continue.".format(self.exchange['tickerC']))
+        if (tickerC not in self.engine.balance):
+            logging.warn("{} wallet with zero balance. Can't continue.".format(tickerC))
             not_enough = True
 
         
@@ -140,9 +155,9 @@ class CryptoEngineTriArbitrage(object):
         logging.info('starting to check order book...')
 
         # Create AsyncRequest to then feed into send_request
-        rs = [self.engine.get_ticker_lastPrice(self.exchange['tickerA']),
-            self.engine.get_ticker_lastPrice(self.exchange['tickerB']),
-            self.engine.get_ticker_lastPrice(self.exchange['tickerC']),
+        rs = [self.engine.get_ticker_lastPrice(tickerA),
+            self.engine.get_ticker_lastPrice(tickerB),
+            self.engine.get_ticker_lastPrice(tickerC),
         ]
         lastPrices = []
         
@@ -190,6 +205,17 @@ class CryptoEngineTriArbitrage(object):
         tickerPairC_ask_price = responses[2].parsed['ask']['price']
         tickerPairC_bid_price = responses[2].parsed['bid']['price']
         
+        self.logdataline.append(tickerA)
+        self.logdataline.append(tickerPairA_ask_price)
+        self.logdataline.append(tickerPairA_bid_price)
+        
+        self.logdataline.append(tickerB)
+        self.logdataline.append(tickerPairB_ask_price)
+        self.logdataline.append(tickerPairB_bid_price)
+
+        self.logdataline.append(tickerC)
+        self.logdataline.append(tickerPairC_ask_price)
+        self.logdataline.append(tickerPairC_bid_price)
         
         # Calculate the gain factor for each route
         
@@ -198,7 +224,8 @@ class CryptoEngineTriArbitrage(object):
         # ask route tickerB->tickerA->tickerC->tickerB
         askRoute_result = tickerPairA_bid_price / tickerPairC_ask_price * tickerPairB_bid_price
 
-
+        self.logdataline.append(bidRoute_result)
+        self.logdataline.append(askRoute_result)
                             
 #         # bid route tickerA->tickerB->tickerC->tickerA
 #         bidRoute_result = (1 / responses[0].parsed['ask']['price']) \
@@ -214,6 +241,9 @@ class CryptoEngineTriArbitrage(object):
         # Calculate the actual real monetary gain in USD for each route
         ricavo_potenziale_bid_tickerA = (bidRoute_result - 1) * lastPrices[0] # units in USDT
         ricavo_potenziale_ask_tickerB = (askRoute_result - 1) * lastPrices[1] # units in USDT
+        
+        self.logdataline.append(ricavo_potenziale_bid_tickerA)
+        self.logdataline.append(ricavo_potenziale_ask_tickerB)
         
         # Compare the real monetary gains for each route with each other,
         # and select route with highest gain. 
