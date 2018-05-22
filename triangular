@@ -1,5 +1,5 @@
 
 source $HOME/env/bin/activate
 cd crypto-arbitrage
-python ./main.py --loglevel ALERT --production -m triangular --logdata $HOME/public_html/ca_logdata.csv 
+python ./main.py --loglevel ERROR --production -m triangular --logdata $HOME/public_html/ca_logdata.csv 
 deactivate
