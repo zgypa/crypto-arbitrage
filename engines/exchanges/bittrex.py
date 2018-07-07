@@ -10,10 +10,13 @@ class ExchangeEngine(ExchangeEngineBase):
         self.API_URL = 'https://bittrex.com/api'
         self.apiVersion = 'v1.1'
         self.sleepTime = 5
-        self.feeRatio = 0.0026
+        self.feeRatio = 0.0026 # from https://support.bittrex.com/hc/en-us/articles/115000199651-What-fees-does-Bittrex-charge-
         self.async = True
                   
-    def _send_request(self, command, httpMethod, params={}, hook=None):          
+    def _send_request(self, command, httpMethod, params={}, hook=None):
+        # Connection Timeout. If Bittrex takes to long to reply, just timeout.
+        params['timeout']=10
+        
         command = '/{0}/{1}'.format(self.apiVersion, command)
 
         url = self.API_URL + command

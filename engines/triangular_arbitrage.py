@@ -366,7 +366,7 @@ class CryptoEngineTriArbitrage(object):
 
             bid_ask = 'bid' if bid_ask == 1 else 'ask'
             
-            logging.debug('Ticker: {} Route decided: {}'.format(tickerIndex, bid_ask))
+            logging.info('Ticker: {} Route decided: {}'.format(tickerIndex, bid_ask))
             
             logging.debug(self.engine.balance[self.exchange[tickerIndex]])
             
