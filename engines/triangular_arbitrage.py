@@ -126,14 +126,17 @@ class CryptoEngineTriArbitrage(object):
         self.engine.balance = responses[0].parsed
         logging.debug(self.engine.balance)
         
-        if (tickerA not in self.engine.balance):
-            logging.warn("{} wallet with zero balance. Can't continue.".format(tickerA))
+        if ((tickerA not in self.engine.balance)  or 
+            (self.engine.balance[tickerA] <= 0.0) ):
+            logging.warn("{} wallet inexistant or with zero balance. Can't continue.".format(tickerA))
             not_enough = True
-        if (tickerB not in self.engine.balance):
-            logging.warn("{} wallet with zero balance. Can't continue.".format(tickerB))
+        if ((tickerB not in self.engine.balance)  or 
+            (self.engine.balance[tickerB] <= 0.0) ):
+            logging.warn("{} wallet inexistant or with zero balance. Can't continue.".format(tickerB))
             not_enough = True
-        if (tickerC not in self.engine.balance):
-            logging.warn("{} wallet with zero balance. Can't continue.".format(tickerC))
+        if ((tickerC not in self.engine.balance)  or 
+            (self.engine.balance[tickerC] <= 0.0) ):
+            logging.warn("{} wallet inexistant or with zero balance. Can't continue.".format(tickerC))
             not_enough = True
 
         
@@ -162,6 +165,7 @@ class CryptoEngineTriArbitrage(object):
         lastPrices = []
         
         # Get last price of each ticker
+        logging.debug("Fetching lastPrices...")
         rs_values = self.send_request(rs)
 #         logging.debug("Found {} results".format(len(rs_values)))
         for res in rs_values:
