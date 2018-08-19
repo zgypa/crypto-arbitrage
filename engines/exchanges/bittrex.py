@@ -2,7 +2,7 @@
     All trades have a 0.25% commission. -> real case it is 0.250626606% so use 0.26% for calculation instead
 
 '''
-
+import logging
 from mod_imports import *
 
 class ExchangeEngine(ExchangeEngineBase):
@@ -10,10 +10,13 @@ class ExchangeEngine(ExchangeEngineBase):
         self.API_URL = 'https://bittrex.com/api'
         self.apiVersion = 'v1.1'
         self.sleepTime = 5
-        self.feeRatio = 0.0026
+        self.feeRatio = 0.0026 # from https://support.bittrex.com/hc/en-us/articles/115000199651-What-fees-does-Bittrex-charge-
         self.async = True
                   
-    def _send_request(self, command, httpMethod, params={}, hook=None):          
+    def _send_request(self, command, httpMethod, params={}, hook=None):
+        # Connection Timeout. If Bittrex takes to long to reply, just timeout.
+        params['timeout']=10
+        
         command = '/{0}/{1}'.format(self.apiVersion, command)
 
         url = self.API_URL + command
@@ -50,7 +53,7 @@ class ExchangeEngine(ExchangeEngineBase):
             response = grequests.map([req])[0].json()
             
             if 'error' in response:
-                print response
+                logging.info(response)
             return response
     '''
         return in r.parsed, showing all and required tickers
@@ -60,7 +63,9 @@ class ExchangeEngine(ExchangeEngineBase):
         }
     '''    
     def get_balance(self, tickers=[]):
-        return self._send_request('account/getbalances', 'GET', {}, [self.hook_getBalance(tickers=tickers)])
+        balance=self._send_request('account/getbalances', 'GET', {}, [self.hook_getBalance(tickers=tickers)])
+        logging.debug(balance)
+        return balance
     
     def hook_getBalance(self, *factory_args, **factory_kwargs):
         def res_hook(r, *r_args, **r_kwargs):
@@ -83,7 +88,8 @@ class ExchangeEngine(ExchangeEngineBase):
         }
     '''       
     def get_ticker_lastPrice(self, ticker):
-         return self._send_request('public/getticker?market=USDT-{0}'.format(ticker), 'GET', {}, [self.hook_lastPrice(ticker=ticker)])
+        logging.info("Looking for last price of {}".format(ticker))
+        return self._send_request('public/getticker?market=USDT-{0}'.format(ticker), 'GET', {}, [self.hook_lastPrice(ticker=ticker)])
 
     def hook_lastPrice(self, *factory_args, **factory_kwargs):
         def res_hook(r, *r_args, **r_kwargs):
@@ -169,7 +175,7 @@ if __name__ == "__main__":
     #     print res.parsed
     #     pass
     for res in grequests.map([engine.get_ticker_lastPrice('LTC')]):
-        print res.parsed
+        logging.info(res.parsed)
         pass    
     #print engine.get_ticker_orderBook('ETH-OMG')
     #print engine.parseTickerData(engine.get_ticker_history('XRPUSD'))
