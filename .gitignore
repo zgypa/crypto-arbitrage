@@ -1,3 +1,4 @@
+.settings/
 keys/*.key
 env
 **.pyc

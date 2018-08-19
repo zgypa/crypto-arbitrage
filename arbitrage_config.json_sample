@@ -3,11 +3,11 @@
         "exchange": "bittrex",
         "keyFile": "keys/bittrex.key",
         "tickerPairA": "BTC-ETH",
-        "tickerPairB": "ETH-BCH",
-        "tickerPairC": "BTC-BCH",
+        "tickerPairB": "ETH-BCC",
+        "tickerPairC": "BTC-BCC",
         "tickerA": "BTC",
         "tickerB": "ETH",
-        "tickerC": "BCH",
+        "tickerC": "BCC",
         "minProfitUSDT" : "0.3"
     },
     "exchange": {
