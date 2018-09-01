@@ -83,7 +83,8 @@ class CryptoEngineTriArbitrage(object):
             responses = self.send_request(rs)
 
             if not responses[0]:
-                logging.info(responses)
+                # No responses
+                logging.error(responses)
                 return False
             
             if responses[0].parsed:
@@ -99,7 +100,7 @@ class CryptoEngineTriArbitrage(object):
         rs = []
         logging.debug(self.exchange['exchange'])
         for order in self.engine.openOrders:
-            logging.debug(order)
+            logging.debug("Adding {} to list of orders to cancel.".format(order['orderId']))
             rs.append(self.engine.cancel_order(order['orderId']))
 
         responses = self.send_request(rs)
@@ -414,8 +415,9 @@ class CryptoEngineTriArbitrage(object):
         responses = grequests.map(rs)
         for res in responses:
             if not res:
-                logging.info(responses)
+                logging.error(responses)
                 raise Exception
+        logging.debug(responses)
         return responses
 
     def run(self):
