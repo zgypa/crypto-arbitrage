@@ -56,7 +56,11 @@ class CryptoEngineTriArbitrage(object):
 #             try:
             self.logdataline = []
             self.logdataline.append(datetime.datetime.utcnow())
-
+            # A comment
+            '''
+            comment
+            '''
+            
             if not self.mock and self.hasOpenOrder:
                 self.check_openOrder()
             elif self.check_balance():           
