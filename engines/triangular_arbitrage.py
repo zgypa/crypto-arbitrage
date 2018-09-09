@@ -31,14 +31,14 @@ tickerC = ""
 class CryptoEngineTriArbitrage(object):
 
     def __init__(self, config):
-        self.exchange = config['triangular']
-        self.mock    = config['isMockMode'] 
-        self.logdata = config['logdata']
-        self.minProfitUSDT = float(self.exchange['minProfitUSDT'])
-        self.hasOpenOrder = True # always assume there are open orders first
+        self.exchange            = config['triangular']
+        self.mock                = config['isMockMode'] 
+        self.logdata             = config['logdata']
+        self.minProfitUSDT       = float(self.exchange['minProfitUSDT'])
+        self.hasOpenOrder        = True # always assume there are open orders first
         self.openOrderCheckCount = 0
         
-        self.logdataline = []
+        self.logdataline         = []
 
         global tickerA, tickerB, tickerC
         tickerA = self.exchange['tickerA']
@@ -56,11 +56,7 @@ class CryptoEngineTriArbitrage(object):
 #             try:
             self.logdataline = []
             self.logdataline.append(datetime.datetime.utcnow())
-            # A comment
-            '''
-            comment
-            '''
-            
+
             if not self.mock and self.hasOpenOrder:
                 self.check_openOrder()
             elif self.check_balance():           

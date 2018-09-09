@@ -70,6 +70,7 @@ class ExchangeEngine(ExchangeEngineBase):
     def hook_getBalance(self, *factory_args, **factory_kwargs):
         def res_hook(r, *r_args, **r_kwargs):
             json = r.json()
+            logging.debug(json)
             r.parsed = {}
             
 
@@ -94,6 +95,7 @@ class ExchangeEngine(ExchangeEngineBase):
     def hook_lastPrice(self, *factory_args, **factory_kwargs):
         def res_hook(r, *r_args, **r_kwargs):
             json = r.json()
+            logging.debug(json)
             r.parsed = {}
             r.parsed[factory_kwargs['ticker']] = json['result']['Last']
                                   

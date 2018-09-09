@@ -4,8 +4,12 @@ Created on Aug 19, 2018
 @author: afm
 '''
 import unittest
+from mock import patch
 import mock
 import logging
+
+import engines.exchanges.bittrex 
+from engines.triangular_arbitrage import CryptoEngineTriArbitrage
 
 '''
 request:
@@ -56,6 +60,90 @@ _content    str: {
 
 '''
 
+bittrex_getbalances_result = {  
+   u'message':u'',
+   u'result':[  
+      {  
+         u'Available':0.001,
+         u'Currency':u'BCH',
+         u'Balance':0.001,
+         u'Pending':0.0,
+         u'CryptoAddress':u'14nXPSydUCJnqLFSboXRXdz49PkyB4FS3A'
+      },
+      {  
+         u'Available':0.09368291,
+         u'Currency':u'BTC',
+         u'Balance':0.09368291,
+         u'Pending':0.0,
+         u'CryptoAddress':None
+      },
+      {  
+         u'Available':1.94e-06,
+         u'Currency':u'ETH',
+         u'Balance':1.94e-06,
+         u'Pending':0.0,
+         u'CryptoAddress':u'0x01a2d435698f5ac911c5316a90e0ff6220027de3'
+      },
+      {  
+         u'Available':999,
+         u'Currency':u'PTOY',
+         u'Balance':999,
+         u'Pending':0.0,
+         u'CryptoAddress':None
+      }
+   ],
+   u'success':True
+}
+
+config = {
+    "triangular": {
+        "exchange": "bittrex",
+        "keyFile": "keys/bittrex.key",
+        "tickerPairA": "BTC-ETH",
+        "tickerPairB": "ETH-LTC",
+        "tickerPairC": "BTC-LTC",
+        "tickerA": "BTC",
+        "tickerB": "ETH",
+        "tickerC": "LTC",
+        "minProfitUSDT" : "0.3"
+    },
+    "exchange": {
+        "minProfit": "0.00005",
+        
+        "exchangeA": {
+            "exchange": "bittrex",
+            "keyFile": "keys/bittrex.key",
+            "tickerPair": "BTC-ETH",
+            "tickerA": "BTC",
+            "tickerB": "ETH"        
+        },
+        "exchangeB": {
+            "exchange": "bitstamp",
+            "keyFile": "keys/bitstamp.key",
+            "tickerPair": "ethbtc",
+            "tickerA": "BTC",
+            "tickerB": "ETH"         
+        }
+    }
+}
+
+def mock_hook_getBalance(*factory_args, **factory_kwargs):
+    def res_hook(r, *r_args, **r_kwargs):
+        json = bittrex_getbalances_result
+        logging.debug(json)
+        r.parsed = {}
+        
+
+        if factory_kwargs['tickers']:
+            json['result'] = filter(lambda ticker: ticker['Currency'].upper() in factory_kwargs['tickers'], json['result'])
+            
+        for ticker in json['result']:
+            r.parsed[ticker['Currency'].upper()] = float(ticker['Available'])
+                              
+    return res_hook    
+
+
+
 class Test(unittest.TestCase):
 
 
@@ -75,14 +163,42 @@ class Test(unittest.TestCase):
     def tearDown(self):
         pass
 
-
+    @unittest.skip("Disabled")
     def testOne(self):
-        from engines.triangular_arbitrage import CryptoEngineTriArbitrage
+        class ExchangeEngine(engines.exchanges.bittrex.ExchangeEngine):
+            hook_getBalance = mock_hook_getBalance
+            
+        engines.exchanges.bittrex.ExchangeEngine = ""
+        
+#         from engines.triangular_arbitrage import CryptoEngineTriArbitrage
         engine = CryptoEngineTriArbitrage(self.config)
         
         engine.run()
+        
+    def testTwo(self):
+        def mock_run(self):
+            print('I Ran allright.')
+        
+        CryptoEngineTriArbitrage.__dict__["run"] = mock_run
+                
+        engine = CryptoEngineTriArbitrage(self.config)
+        
+        engine.run()
+        
+        
+    
+    @patch('engines.triangular_arbitrage.CryptoEngineTriArbitrage')
+    def testMocks(self, MockCryptoEngineTriArbitrage):
+        mock_ceta = MockCryptoEngineTriArbitrage(config)
+        
+        mock_ceta.run.return_value = 'I Ran allright.'
+        
+#         r = run()
+        r = mock_ceta.run()
+        
+        print("{}".format(r))
 
-
+        
 
 
 if __name__ == "__main__":
