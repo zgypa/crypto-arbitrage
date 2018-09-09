@@ -4,6 +4,7 @@ Created on Aug 19, 2018
 @author: afm
 '''
 import unittest
+import mock
 import logging
 
 '''
