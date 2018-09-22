@@ -163,7 +163,7 @@ class Test(unittest.TestCase):
     def tearDown(self):
         pass
 
-#     @unittest.skip("Disabled")
+    @unittest.skip("Disabled")
     def testOne(self):
 #         class ExchangeEngine(engines.exchanges.bittrex.ExchangeEngine):
 #             hook_getBalance = mock_hook_getBalance
@@ -175,6 +175,7 @@ class Test(unittest.TestCase):
         
         engine.run()
         
+    @unittest.skip("Disabled")
     def testTwo(self):
         def mock_run(obj=None):
             print('I Ran allright.')
@@ -188,7 +189,7 @@ class Test(unittest.TestCase):
         engine.run()
         
         
-    
+    @unittest.skip("Disabled")    
     @patch('engines.triangular_arbitrage.CryptoEngineTriArbitrage')
     def testMocks(self, MockCryptoEngineTriArbitrage):
         mock_ceta = MockCryptoEngineTriArbitrage(config)
@@ -200,8 +201,37 @@ class Test(unittest.TestCase):
         
         print("{}".format(r))
 
+#     @unittest.skip("Disabled")
+    def testBittrexAPI(self):
+        import grequests
+        bte = engines.exchanges.bittrex.ExchangeEngine()
+        bte.load_key('./keys/bittrex.key')
+        get_balances_request = bte.get_balance()
         
+        logging.debug('request URL is: {}'.format(get_balances_request.url))
+#         rs = [grequests.get(get_balances_request.url)]
 
+#         get_balances_request.kwargs = {'timeout': 10, 'headers' : {'apisign': ''}}
+#         get_balances_request.kwargs = {
+#             'headers': {
+#                 'apisign': 'b01898a4bb52600504b1389304f9fd523131d60a76fa26b67a133c9602ffa6bc505a43d45004a099399512df137981d17391f33a89cc58c88a794e0224a41db3'}, 
+# #             'data': {
+# #                 'timeout': 10}, 
+# #             'hooks': {
+# #                 'response': ''}
+# #             } 
+# #                 'apisign': 'b01898a4bb52600504b1389304f9fd523131d60a76fa26b67a133c9602ffa6bc505a43d45004a099399512df137981d17391f33a89cc58c88a794e0224a41db3', 
+#             'timeout': 10, 
+#             } 
+#         
+        rs = [get_balances_request]
+        resp = grequests.map(rs)
+        print(resp[0].content)
+#         rs = grequests.map()
+#         get_balances_response = grequests.map([get_balances_request])
+        
+#         logging.info("balance: {}".format(get_balances_response[0].response))
+        
 
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testName']
