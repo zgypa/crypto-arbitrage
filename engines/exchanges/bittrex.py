@@ -46,7 +46,9 @@ class ExchangeEngine(ExchangeEngineBase):
                 'apisign': signature,
             }        
 
-        args = {'data': params, 'headers': headers}
+        args = params
+        args['headers'] = headers #add headers with apisign to request arguments
+
         if hook:
             args['hooks'] = dict(response=hook)
             
