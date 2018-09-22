@@ -163,12 +163,12 @@ class Test(unittest.TestCase):
     def tearDown(self):
         pass
 
-    @unittest.skip("Disabled")
+#     @unittest.skip("Disabled")
     def testOne(self):
-        class ExchangeEngine(engines.exchanges.bittrex.ExchangeEngine):
-            hook_getBalance = mock_hook_getBalance
+#         class ExchangeEngine(engines.exchanges.bittrex.ExchangeEngine):
+#             hook_getBalance = mock_hook_getBalance
             
-        engines.exchanges.bittrex.ExchangeEngine = ""
+#         engines.exchanges.bittrex.ExchangeEngine.hook_getBalance = mock_hook_getBalance
         
 #         from engines.triangular_arbitrage import CryptoEngineTriArbitrage
         engine = CryptoEngineTriArbitrage(self.config)
@@ -176,12 +176,14 @@ class Test(unittest.TestCase):
         engine.run()
         
     def testTwo(self):
-        def mock_run(self):
+        def mock_run(obj=None):
             print('I Ran allright.')
         
-        CryptoEngineTriArbitrage.__dict__["run"] = mock_run
-                
+#         CryptoEngineTriArbitrage.__dict__["run"] = mock_run()
+        CryptoEngineTriArbitrage.run = mock_run
         engine = CryptoEngineTriArbitrage(self.config)
+        
+#         engine.run = mock_run
         
         engine.run()
         
