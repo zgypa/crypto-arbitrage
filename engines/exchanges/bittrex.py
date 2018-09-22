@@ -14,6 +14,11 @@ class ExchangeEngine(ExchangeEngineBase):
         self.async = True
                   
     def _send_request(self, command, httpMethod, params={}, hook=None):
+        '''
+        This method doesn't actually send the request: it produces and returns
+        a grequests object which should then be passed to grequests.map which will
+        process it and make the actual connection to get the results.
+        '''
         # Connection Timeout. If Bittrex takes to long to reply, just timeout.
         params['timeout']=10
         
