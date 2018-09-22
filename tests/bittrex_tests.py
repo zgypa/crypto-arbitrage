@@ -3,13 +3,17 @@ Created on Aug 19, 2018
 
 @author: afm
 '''
+import grequests
 import unittest
 from mock import patch
 import mock
 import logging
 
+# from engines.triangular_arbitrage import CryptoEngineTriArbitrage
+import engines
 import engines.exchanges.bittrex 
-from engines.triangular_arbitrage import CryptoEngineTriArbitrage
+import engines.triangular_arbitrage
+from mock.mock import _side_effect_methods
 
 '''
 request:
@@ -127,6 +131,66 @@ config = {
     }
 }
 
+def mock__send_request(command, httpMethod, params={}, hook=None):
+    '''
+    This method doesn't actually send the request: it produces and returns
+    a grequests object which should then be passed to grequests.map which will
+    process it and make the actual connection to get the results.
+    '''
+    import time
+    # Connection Timeout. If Bittrex takes to long to reply, just timeout.
+    params['timeout']=10
+    
+    command = '/{0}/{1}'.format('v1.1', command)
+
+    API_URL = 'https://bittrex.com/api'
+    url = API_URL + command
+    
+    if httpMethod == "GET":
+        R = grequests.get
+    elif httpMethod == "POST":
+        R = grequests.post       
+    
+    headers = {}
+    
+    if not any(x in command for x in ['Public', 'public']):
+        nonce = str(int(1000*time.time()))
+        url = url + '{0}apikey={1}&nonce={2}'.format('&' if '?' in url else '?', self.key['public'], nonce)
+        
+        secret = self.key['private']
+        
+        signature = hmac.new(secret.encode('utf8'), url.encode('utf8'), hashlib.sha512)
+        signature = signature.hexdigest()
+        
+        headers = {
+            'apisign': signature,
+        }        
+
+    args = params
+    args['headers'] = headers #add headers with apisign to request arguments
+
+    if hook:
+        args['hooks'] = dict(response=hook)
+        
+    req = R(url, **args)
+    
+    if self.async:
+        return req
+    else:
+        response = grequests.map([req])[0].json()
+        
+        if 'error' in response:
+            logging.info(response)
+        return response
+
+
+def mock_get_balance(self, tickers=[]):
+    logging.warn("Mocking get Balances")
+    balance=self._send_request('account/getbalances', 'GET', {}, [mock_hook_getBalance(tickers=tickers)])
+    logging.debug(balance.kwargs)
+    return balance
+
+
 def mock_hook_getBalance(*factory_args, **factory_kwargs):
     def res_hook(r, *r_args, **r_kwargs):
         json = bittrex_getbalances_result
@@ -142,6 +206,15 @@ def mock_hook_getBalance(*factory_args, **factory_kwargs):
                               
     return res_hook    
 
+def mock_send_request(self, rs):
+    logging.info("WARNING: Running Mock Send Requests.")
+    responses = grequests.map(rs)
+    for res in responses:
+        if not res:
+            logging.error(responses)
+            raise Exception
+    logging.debug(responses)
+    return responses
 
 
 class Test(unittest.TestCase):
@@ -165,15 +238,19 @@ class Test(unittest.TestCase):
 
     @unittest.skip("Disabled")
     def testOne(self):
+        logging.warn("Running Test One Warn")
+        logging.warning("Running Test One Warning")
 #         class ExchangeEngine(engines.exchanges.bittrex.ExchangeEngine):
 #             hook_getBalance = mock_hook_getBalance
-            
-#         engines.exchanges.bittrex.ExchangeEngine.hook_getBalance = mock_hook_getBalance
+             
+#         engines.exchanges.bittrex.ExchangeEngine.get_balance = mock_get_balance
+#         engines.exchanges.bittrex.ExchangeEngine.__dict__["get_balance"] = mock_get_balance
+         
+#         engines.triangular_arbitrage.CryptoEngineTriArbitrage.send_request = mock_send_request
+        bittrex_engine = engines.triangular_arbitrage.CryptoEngineTriArbitrage(self.config)
+        bittrex_engine.engine.get_balance = mock_get_balance
         
-#         from engines.triangular_arbitrage import CryptoEngineTriArbitrage
-        engine = CryptoEngineTriArbitrage(self.config)
-        
-        engine.run()
+        bittrex_engine.run()
         
     @unittest.skip("Disabled")
     def testTwo(self):
@@ -181,20 +258,21 @@ class Test(unittest.TestCase):
             print('I Ran allright.')
         
 #         CryptoEngineTriArbitrage.__dict__["run"] = mock_run()
-        CryptoEngineTriArbitrage.run = mock_run
-        engine = CryptoEngineTriArbitrage(self.config)
+        engines.triangular_arbitrage.CryptoEngineTriArbitrage.run = mock_run
+        engine = engines.triangular_arbitrage.CryptoEngineTriArbitrage(self.config)
         
 #         engine.run = mock_run
         
         engine.run()
         
         
-    @unittest.skip("Disabled")    
-    @patch('engines.triangular_arbitrage.CryptoEngineTriArbitrage')
+#     @unittest.skip("Disabled")    
+    @patch('engines.triangular_arbitrage.CryptoEngineTriArbitrage.engine.get_balance', 
+           side_effect=mock_get_balance)
     def testMocks(self, MockCryptoEngineTriArbitrage):
         mock_ceta = MockCryptoEngineTriArbitrage(config)
         
-        mock_ceta.run.return_value = 'I Ran allright.'
+#         mock_ceta.get_balance = 'I Ran allright.'
         
 #         r = run()
         r = mock_ceta.run()
@@ -209,28 +287,8 @@ class Test(unittest.TestCase):
         get_balances_request = bte.get_balance()
         
         logging.debug('request URL is: {}'.format(get_balances_request.url))
-#         rs = [grequests.get(get_balances_request.url)]
-
-#         get_balances_request.kwargs = {'timeout': 10, 'headers' : {'apisign': ''}}
-#         get_balances_request.kwargs = {
-#             'headers': {
-#                 'apisign': 'b01898a4bb52600504b1389304f9fd523131d60a76fa26b67a133c9602ffa6bc505a43d45004a099399512df137981d17391f33a89cc58c88a794e0224a41db3'}, 
-# #             'data': {
-# #                 'timeout': 10}, 
-# #             'hooks': {
-# #                 'response': ''}
-# #             } 
-# #                 'apisign': 'b01898a4bb52600504b1389304f9fd523131d60a76fa26b67a133c9602ffa6bc505a43d45004a099399512df137981d17391f33a89cc58c88a794e0224a41db3', 
-#             'timeout': 10, 
-#             } 
-#         
-        rs = [get_balances_request]
-        resp = grequests.map(rs)
-        print(resp[0].content)
-#         rs = grequests.map()
-#         get_balances_response = grequests.map([get_balances_request])
-        
-#         logging.info("balance: {}".format(get_balances_response[0].response))
+        resp = grequests.map([get_balances_request])
+        self.assertEqual(resp[0].status_code, 200, "HTTP Status Code NOT 200. Something went wrong.")
         
 
 if __name__ == "__main__":
