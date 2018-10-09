@@ -6,7 +6,7 @@ Created on Aug 19, 2018
 import grequests
 import unittest
 from mock import patch
-import mock
+import json
 import logging
 
 # from engines.triangular_arbitrage import CryptoEngineTriArbitrage
@@ -63,6 +63,10 @@ _content    str: {
     "message":"","result":{"buy":[{"Quantity":2.93260000,"Rate":0.04065854},{"Quantity":1.91109525,"Rate":0.04065254},{"Quantity":0.30403250,"Rate":0.04065107},{"Quantity":7.25692853,"Rate":0.04065106},{"Quantity":111.60468394,"Rate":0.04064904},{"Quantity":1.41700000,"Rate":0.04064137},{"Quantity":1.76000000,"Rate":0.04063937},{"Quantity":2.65500000,"Rate":0.04063139},{"Quantity":2.96200000,"Rate":0.04062140},{"Quantity":2.56800000,"Rate":0.04061440},{"Quantity":4.72585000,"Rate":0.04056400},{"Quantity":0.05000000,"Rate":0.04056201},{"Quantity":0.40300000,"Rate":0.04055100},{"Quantity":0.47600000,"Rate":0.04054900},{"Quantity":0.29000000,"Rate":0.04052804},{"Quantity":60.35438533,"Rate":0.04052803},{"Quantity":0.02702398,"Rate":0.04051964},{"Quantity":4.54000000,"Rate":0.04051949},{"Quantity":0.53300000,"Rate":0.04051939},{"Quantity":17.67938830,"Rate":0.04050976},{"Quantity":2.12206985,"Rate":0.04050022},{"Quantity":0.24694492,"Rate":0.04049486},{"Quantity":27.249273...    
 
 '''
+
+with open('keys/bittrex.key') as kf:
+    key = json.load(kf)
+
 
 bittrex_getbalances_result = {  
    u'message':u'',
@@ -153,11 +157,12 @@ def mock__send_request(command, httpMethod, params={}, hook=None):
     
     headers = {}
     
+    import hmac, hashlib
     if not any(x in command for x in ['Public', 'public']):
         nonce = str(int(1000*time.time()))
-        url = url + '{0}apikey={1}&nonce={2}'.format('&' if '?' in url else '?', self.key['public'], nonce)
+        url = url + '{0}apikey={1}&nonce={2}'.format('&' if '?' in url else '?', key['public'], nonce)
         
-        secret = self.key['private']
+        secret = key['private']
         
         signature = hmac.new(secret.encode('utf8'), url.encode('utf8'), hashlib.sha512)
         signature = signature.hexdigest()
@@ -174,14 +179,7 @@ def mock__send_request(command, httpMethod, params={}, hook=None):
         
     req = R(url, **args)
     
-    if self.async:
-        return req
-    else:
-        response = grequests.map([req])[0].json()
-        
-        if 'error' in response:
-            logging.info(response)
-        return response
+    return req
 
 
 def mock_get_balance(self, tickers=[]):
@@ -222,10 +220,8 @@ class Test(unittest.TestCase):
 
     def setUp(self):
         import json
-        configFile = 'arbitrage_config.json'
-        f = open(configFile)    
-        self.config = json.load(f)
-        f.close()
+        with open('arbitrage_config.json') as cf:
+            self.config = json.load(cf)
         self.config['isMockMode'] = False
         self.config['logdata']    = '/tmp/triangular.log'
         logging.basicConfig(format='%(asctime)s - %(levelname)s - %(pathname)s:%(funcName)s(): %(message)s',
